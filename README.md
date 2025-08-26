@@ -4,7 +4,7 @@ A simple **HTML + JavaScript** based sketch editor.
 It allows you to draw freehand sketches on top of an imported background image, and optionally export them.
 
 ## Live Demo
-👉 [Click here to try](https://kaiyishen.github.io/Sketch_Editor/)
+👉 [Click here to try](https://kaiyishen.github.io/Sketch_Track_Editor/)
 
 ## Usage
 1. Open the demo link above.
