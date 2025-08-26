@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <title>Sketch_Track_Editor</title>
+  <style>
+    :root {
+      --primary-color: #3498db; /* Blue - primary action buttons */
+      --danger-color: #e74c3c;  /* Red - delete actions */
+      --warning-color: #f39c12; /* Orange - undo actions */
+      --secondary-color: #f5f5f7; /* Secondary background */
+      --mid-gray: #e0e0e0;
+      --dark-gray: #95a5a6;
+      --text-color: #333;
+      --shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      --transition: all 0.2s ease;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 20px;
+      color: var(--text-color);
+      background-color: #f9f9f9;
+      line-height: 1.5;
+    }
+
+    h2, h3 { color: #2c3e50; margin-bottom: 16px; font-weight: 600; }
+    h2 { font-size: 1.8rem; border-bottom: 2px solid var(--primary-color); padding-bottom: 8px; margin-top: 0; }
+    h3 { font-size: 1.3rem; margin-top: 0; margin-bottom: 12px; }
+
+    .container { max-width: 1400px; margin: 0 auto; }
+
+    .btn-row { display: flex; align-items: center; margin: 12px 0; flex-wrap: wrap; gap: 10px; }
+
+    button {
+      background-color: var(--primary-color);
+      color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 14px;
+      transition: var(--transition); display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    button:hover { transform: translateY(-1px); box-shadow: var(--shadow); }
+    button:active { transform: translateY(1px); }
+    button.danger { background-color: var(--danger-color); }
+    button.danger:hover { background-color: #c0392b; }
+    button.warning { background-color: var(--warning-color); }
+    button.warning:hover { background-color: #e67e22; }
+    button.secondary { background-color: white; color: var(--text-color); border: 1px solid var(--mid-gray); }
+    button.secondary:hover { background-color: var(--secondary-color); }
+
+    input, select, textarea {
+      padding: 8px 12px; border: 1px solid var(--mid-gray); border-radius: 4px; font-size: 14px; transition: var(--transition);
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 2px rgba(52,152,219,0.2);
+    }
+    label { font-size: 14px; color: var(--text-color); display: inline-flex; align-items: center; gap: 6px; }
+
+    #canvas { border: 1px solid var(--mid-gray); display: block; margin: auto; background-color: white; box-shadow: var(--shadow); transition: var(--transition); cursor: crosshair; }
+    #canvas:hover { box-shadow: 0 4px 15px rgba(0,0,0,0.15); }
+
+    #trajProgress { width: 200px; height: 16px; margin-left: 12px; }
+
+    .file-input-wrapper { position: relative; overflow: hidden; display: inline-block; }
+    .file-input-wrapper button { border: 1px solid var(--primary-color); color: white; background-color: var(--primary-color); padding: 8px 16px; border-radius: 4px; font-size: 14px; font-weight: normal; }
+    .file-input-wrapper input[type=file] { font-size: 100px; position: absolute; left: 0; top: 0; opacity: 0; cursor: pointer; }
+
+    .btn-row input[type="number"] { margin-left: 4px; width: 80px; }
+
+    .editor-container { display: flex; gap: 20px; margin: 20px 0; min-height: 600px; }
+    .trajectory-data-panel { width: 320px; border: 1px solid var(--mid-gray); padding: 16px; background: white; border-radius: 8px; box-shadow: var(--shadow); display: flex; flex-direction: column; }
+    .json-display { font-family: 'Consolas','Monaco',monospace; background: white; padding: 12px; border: 1px solid var(--mid-gray); border-radius: 4px; height: 500px; overflow: auto; white-space: pre-wrap; font-size: 13px; line-height: 1.4; }
+    .trajectory-actions { display: flex; gap: 10px; margin-bottom: 12px; }
+
+    .canvas-container { flex-grow: 1; display: flex; flex-direction: column; align-items: center; padding: 16px; background: white; border-radius: 8px; box-shadow: var(--shadow); }
+
+    #cropControls { margin: 16px 0; padding: 16px; border: 1px solid var(--mid-gray); background: white; border-radius: 8px; box-shadow: var(--shadow); display: none; }
+
+    #topControls, .bottom-section { background: white; padding: 16px; border-radius: 8px; box-shadow: var(--shadow); margin-bottom: 16px; }
+    .bottom-section { display: flex; gap: 20px; }
+    #bottomControls { flex: 1; }
+
+    .paste-container { width: 400px; display: flex; flex-direction: column; padding-left: 20px; border-left: 1px solid var(--mid-gray); height: 100%; }
+    .paste-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    #pasteTextarea { width: 100%; padding: 12px; border-radius: 4px; border: 1px solid var(--mid-gray); font-family: inherit; resize: vertical; flex-grow: 1; min-height: 320px; margin-bottom: 12px; }
+    .paste-content { display: flex; flex-direction: column; height: 100%; }
+
+    #trackSelect { min-width: 180px; padding: 8px 12px; }
+    #colorIndicator { width: 18px; height: 18px; border: 1px solid #444; display: inline-block; vertical-align: middle; margin-left: 8px; pointer-events: none; visibility: hidden; border-radius: 3px; }
+
+    .control-group { margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--mid-gray); }
+    .control-group:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+
+    .tooltip { position: relative; }
+    .tooltip:hover::after {
+      content: attr(title); position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%);
+      background-color: #2c3e50; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; white-space: nowrap; z-index: 100;
+    }
+
+    .progress-container { display: flex; align-items: center; gap: 8px; }
+
+    @media (max-width: 1024px) {
+      .editor-container { flex-direction: column; }
+      .trajectory-data-panel { width: 100%; }
+      .json-display { height: 300px; }
+      .bottom-section { flex-direction: column; }
+      .paste-container { width: 100%; padding-left: 0; padding-top: 20px; border-left: none; border-top: 1px solid var(--mid-gray); }
+      #pasteTextarea { min-height: 180px; }
+    }
+
+    #editStrengthSlider {
+      -webkit-appearance: none; appearance: none;
+      width: calc(120px + 16px); margin: 0; padding: 0 0px; background: transparent;
+    }
+    #editStrengthSlider::-webkit-slider-runnable-track { width: 120px; height: 6px; background: #ddd; border-radius: 3px; border: none; margin: 0 auto; }
+    #editStrengthSlider::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: var(--primary-color); cursor: pointer; margin-top: -5px; position: relative; }
+    #editStrengthSlider::-moz-range-track { width: 120px; height: 6px; background: #ddd; border-radius: 3px; border: none; margin: 0 auto; }
+    #editStrengthSlider::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: var(--primary-color); cursor: pointer; border: none; }
+    #editStrengthSlider[value="0"]::-webkit-slider-thumb { transform: translateX(0); }
+    #editStrengthSlider[value="3"]::-webkit-slider-thumb { transform: translateX(0); }
+
+    #editTrackBtn { min-width: 110px; flex: 0 0 auto; }
+  </style>
+
+  <style>
+    /* touch/pencil minimal fix */
+    canvas { touch-action: none; -webkit-user-select: none; user-select: none; }
+  </style>
+
+  <!-- Dark theme skin (A-Plan): pure CSS override, no HTML/JS changes) -->
+  <style>
+:root{
+  --bg:#0e1116; --panel:#151b26; --soft:#1f2836; --line:#283449;
+  --fg:#e8eef6; --mut:#9aa7b4; --accent:#ffd36b;
+}
+html,body{background:var(--bg)!important;color:var(--fg)!important}
+body{font:14px/1.45 system-ui,Segoe UI,Arial}
+.container{max-width:1400px;margin:16px auto 24px auto}
+#topControls,.bottom-section,.canvas-container,.trajectory-data-panel,#cropControls{
+  background:var(--panel)!important;border:1px solid var(--soft)!important;border-radius:12px!important;box-shadow:none!important;
+}
+h2,h3{color:var(--fg)!important}
+h2{border-bottom:1px solid var(--soft)!important}
+.control-group{border-bottom:1px solid var(--soft)!important}
+.control-group:last-child{border-bottom:0!important}
+button{
+  background:#101722!important;color:var(--fg)!important;border:1px solid var(--line)!important;
+  border-radius:9px!important;box-shadow:none!important;padding:7px 10px!important;
+}
+button:hover{border-color:#6b7a91!important}
+button.secondary{background:#0e141d!important;color:var(--fg)!important;border-color:var(--line)!important}
+button.warning{background:#131a24!important;border-color:#7a5d1a!important;color:#ffe3a1!important}
+button.danger{background:#1a1212!important;border-color:#6b3a3a!important;color:#ffb3b3!important}
+.file-input-wrapper button{background:#101722!important;color:var(--fg)!important;border:1px solid var(--line)!important;border-radius:9px!important}
+input[type=number],select,textarea{
+  background:#0b1118!important;color:var(--fg)!important;border:1px solid var(--line)!important;border-radius:9px!important;
+}
+input[type=number]:focus,select:focus,textarea:focus{
+  outline:none!important;box-shadow:0 0 0 2px rgba(255,211,107,.25)!important;border-color:#4b5e78!important;
+}
+input[type=range]{accent-color:var(--accent)!important}
+label{color:var(--fg)!important}
+progress{background:#0b1118!important;border:1px solid var(--line)!important;border-radius:8px!important}
+progress::-webkit-progress-bar{background:#0b1118}
+progress::-webkit-progress-value{background:var(--accent)}
+progress::-moz-progress-bar{background:var(--accent)}
+.json-display{background:#0b1118!important;color:#d7dde7!important;border:1px solid var(--line)!important;border-radius:8px!important}
+.paste-container{border-left:1px solid var(--soft)!important}
+#pasteTextarea{background:#0b1118!important;color:var(--fg)!important;border:1px solid var(--line)!important;border-radius:8px!important}
+#pasteStatus{color:#87e0a3!important}
+#canvas{background:#0b0f14!important;border:1px solid var(--soft)!important;border-radius:12px!important;box-shadow:none!important}
+#trackSelect{background:#0b1118!important;color:var(--fg)!important;border:1px solid var(--line)!important;border-radius:9px!important}
+#colorIndicator{border-color:#2b3546!important}
+#cropControls h3{color:var(--fg)!important}
+#cropControls label{color:var(--mut)!important}
+#topControls,.bottom-section{padding:12px 16px!important}
+.canvas-container,.trajectory-data-panel,#cropControls{padding:12px 16px!important}
+.btn-row{gap:8px!important}
+*::-webkit-scrollbar{width:10px;height:10px}
+*::-webkit-scrollbar-thumb{background:#1e2633;border-radius:8px;border:2px solid #0f141c}
+*::-webkit-scrollbar-track{background:#0f141c}
+.tooltip:hover::after{background:#14202b!important;border:1px solid var(--soft)!important;color:var(--fg)!important}
+.tag{font-size:10px;color:#c6d1de;background:#253244;border:1px solid #2f3e52;border-radius:6px;padding:2px 6px}
+button.primary,#copyJsonBtn,#exportJsonBtn{
+  background:#0f151b!important;border-color:#b8933a!important;color:#ffe7a8!important;
+}
+button.primary:hover,#copyJsonBtn:hover,#exportJsonBtn:hover{border-color:#ffd36b!important}
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h2>Sketch Track Editor</h2>
+
+    <div id="topControls">
+      <div class="control-group">
+        <div class="btn-row">
+          <div class="file-input-wrapper">
+            <button>Select File</button>
+            <input type="file" id="fileInput" accept="image/*">
+          </div>
+
+          <label>Canvas Width:</label>
+          <input type="number" id="canvasWidth" value="1024" min="100">
+          <label>Canvas Height:</label>
+          <input type="number" id="canvasHeight" value="576" min="100">
+          <button id="applyCanvasSizeBtn">Apply Size</button>
+          <button id="undoBtn" title="Undo last action" class="warning tooltip">Undo</button>
+          <button id="clearBtn" title="Clear all tracks" class="danger tooltip">Clear</button>
+        </div>
+      </div>
+
+      <div id="cropControls">
+        <h3>Image Cropping</h3>
+        <div class="btn-row">
+          <button id="startCropBtn">Start Crop</button>
+          <button id="applyCropBtn">Apply Crop</button>
+          <button id="cancelCropBtn" class="secondary">Cancel Crop</button>
+        </div>
+        <div class="btn-row">
+          <label>X: <input type="number" id="cropX" readonly></label>
+          <label>Y: <input type="number" id="cropY" readonly></label>
+          <label>Width: <input type="number" id="cropWidth" readonly></label>
+          <label>Height: <input type="number" id="cropHeight" readonly></label>
+        </div>
+      </div>
+    </div>
+
+    <div class="editor-container">
+      <div class="canvas-container">
+        <canvas id="canvas"></canvas>
+      </div>
+
+      <div class="trajectory-data-panel">
+        <h3>Track Data</h3>
+        <div class="trajectory-actions">
+          <button id="copyJsonBtn">Copy JSON</button>
+          <button id="exportJsonBtn">Export</button>
+        </div>
+        <pre id="trajectoryDataDisplay" class="json-display"></pre>
+      </div>
+    </div>
+
+    <div class="bottom-section">
+      <div id="bottomControls">
+        <div class="control-group">
+          <div class="btn-row">
+            <button id="addTrackBtn">Add Free Track</button>
+            <button id="deleteLastBtn" class="danger">Delete Last Track</button>
+            <div class="progress-container">
+              <progress id="trajProgress" max="121" value="0" style="display:none;"></progress> <span id="trajCount" style="display:none;margin-left:6px;">0/121</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <div class="btn-row">
+            <button id="placeCircleBtn">Place Circle</button>
+            <button id="addCirclePointBtn">Add Circle Point</button>
+            <label>Radius:
+              <input type="range" id="radiusSlider" min="10" max="800" value="50" style="display:none;">
+            </label>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <div class="btn-row">
+            <button id="addStaticBtn">Add Static Point</button>
+            <label>Static Frames:
+              <input type="number" id="staticFramesInput" value="121" min="1">
+            </label>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <div class="btn-row">
+            <select id="trackSelect" style="min-width:160px;"></select>
+            <div id="colorIndicator"></div>
+            <button id="deleteTrackBtn" class="danger">Delete Selected</button>
+            <button id="editTrackBtn">Edit Track</button>
+            <label>Strength:
+              <input type="range" id="editStrengthSlider" min="0" max="3" value="1" step="0.01" style="width: 120px;">
+              <span id="editStrengthValue">1.00</span>
+              <button id="resetStrengthBtn" class="secondary" style="margin-left: 5px;">Reset</button>
+            </label>
+            <button id="duplicateTrackBtn">Duplicate Track</button>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <div class="btn-row">
+            <label>X Motion(px/frame): <input type="number" id="motionXInput" value="0"></label>
+            <label>Y Motion(px/frame): <input type="number" id="motionYInput" value="0"></label>
+            <button id="applySelectedMotionBtn">Apply to Selected</button>
+            <button id="applyAllMotionBtn">Apply to All</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="paste-container">
+        <div class="paste-content">
+          <div class="paste-header">
+            <h3>Paste Track JSON Data</h3>
+            <button id="restoreBtn">Paste Track</button>
+          </div>
+          <textarea id="pasteTextarea" placeholder="Paste Array<Array<{x,y}>> format track data"></textarea>
+          <div class="btn-row">
+            <span id="pasteStatus" style="margin-left: 10px; color: green;"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script src="app_en.js"></script>
+</body>
+</html>
+
